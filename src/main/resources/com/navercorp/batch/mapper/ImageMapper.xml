@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.navercorp.batch.mapper.ImageMapper">
+	<select id="selectImageTypeList" resultType="com.navercorp.batch.domain.ImageTypeVO">
+		select imageType_pk as typeKey, typeName from image_type;
+	</select>
+	
+	<select id="selectImageUsageTypeList" resultType="com.navercorp.batch.domain.ImageTypeVO">
+		select imageUsageType_pk as typeKey, typeName from image_usage_type;
+	</select>
+	
+	<insert id="insertImageInfoList" parameterType="java.util.List">
+		insert into image_info values
+		<foreach collection="list" item="item" separator=" , ">
+			(
+				#{item.imageKey}, 
+				#{item.imageUsageKey},
+				#{item.imageTypeKey},
+				#{item.bzstNo},
+				#{item.panoTypeCd},
+				#{item.b64},
+				0
+			)
+		</foreach>
+	</insert>
+	
+	<select id="selectDuplicateImage" parameterType="String" resultType="int">
+		select count(*) from image_info where image_pk = #{imageKey}
+	</select>
+	
+	<select id="selectImageInfoCnt" resultType="int">
+		select count(*) from image_info	where isUsed = 0
+	</select>
+	
+	<delete id="deleteIsUsedImageInfo">
+		delete from image_info where image_pk in (select image_pk from image_info where isUsed=1)
+	</delete>
+	
+	<select id="selectImageAllTypeList" resultType="com.navercorp.batch.domain.ImageAllTypeCntVO">
+		select USAGETYPE.typeName as usageName, IMGTYPE.typeName as typeName, count(imageType_fk) as panoramaImagePoolSize 
+		from image_info INFO 
+		join image_type IMGTYPE on INFO.imageType_fk = IMGTYPE.imageType_pk
+		join image_usage_type USAGETYPE on INFO.imageUsageType_fk = USAGETYPE.imageUsageType_pk
+		group by imageUsageType_fk, imageType_fk
+		order by USAGETYPE.typeName;
+	</select>
+	
+	<insert id="insertUnusedImageList" parameterType="java.util.List">
+		insert into unused_info values
+		 <foreach collection="list" item="item" separator=" , "> 
+			(concat(#{item.bzstNo}, '_', #{item.panoTypeCd}, '_', date_format(now(), '%y%m%d%h%i%s')), #{item.bzstNo}, #{item.panoTypeCd}, now())
+		</foreach>
+	</insert>
+	
+	<select id="selectCheckUnusedImage" parameterType="String" resultType="int">
+		select count(*) from unused_info where concat(bzstNo, '_', panoTypeCd) = #{imageKey}
+	</select>
+</mapper>
